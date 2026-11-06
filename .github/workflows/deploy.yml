@@ -1,0 +1,56 @@
+
+name: Java Build Test Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+jobs:
+  build-test-deploy:
+
+    name: Build Test and Deploy
+    runs-on: [self-hosted, linux, x64]
+
+    steps:
+
+      # STEP 1: Download source code
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # STEP 2: Check Java and Maven
+      - name: Check Environment
+        run: |
+          java -version
+          mvn -version
+
+      # STEP 3: Build and test
+      - name: Build and Test
+        run: |
+          mvn -B clean verify
+
+      # STEP 4: Verify JAR
+      - name: Verify JAR File
+        run: |
+          ls -lh target/
+          test -f target/self-hosted-runner-1.0.jar
+
+      # STEP 5: Copy JAR to staging directory
+      - name: Prepare Deployment
+        run: |
+          mkdir -p /home/ubuntu/deploy
+          cp target/self-hosted-runner-1.0.jar \
+             /home/ubuntu/deploy/app.jar
+
+      # STEP 6: Deploy application
+      - name: Deploy Application
+        run: |
+          sudo /usr/local/sbin/deploy-java-app
+
+      # STEP 7: Verify deployment
+      - name: Verify Deployment
+        run: |
+          sudo systemctl status java-maven-app --no-pager
+          curl --fail http://localhost:8080/
